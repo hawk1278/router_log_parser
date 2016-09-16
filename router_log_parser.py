@@ -20,13 +20,13 @@ def status_parser(logline):
 def src_parser(logline):
     for line in logline:
         if 'SRC' in line:
-	    return line.split('=')[1]
+            return line.split('=')[1]
 
 
 def dst_parser(logline):
     for line in logline:
-                if 'DST' in line:
-		    return line.split('=')[1]
+        if 'DST' in line:
+            return line.split('=')[1]
 
 
 def write_log_data(jevents):
@@ -37,8 +37,7 @@ def write_log_data(jevents):
 
 
 def gen_events_stream(sys_log_file):
-    #router_parser_logger.info('Begining read from {0}.'.format(sys_log_file))
-    sys_log_file.seek(0,2)
+    sys_log_file.seek(0, 2)
     while True:
         line = sys_log_file.readline()
         if not line:
@@ -65,12 +64,12 @@ def gen_events(fh):
     for line in fh:
         json_data = json.loads(line)
         message = json_data['message'].split(' ')
-	router_parser_logger.info("Generating event.")
+        router_parser_logger.info("Generating event.")
         event = {'event date': json_data['timestamp'],
                  'event status': status_parser(message),
                  'event source': src_parser(message),
                  'event dest': dst_parser(message)
-        }
+                 }
         yield event
 
 
@@ -84,12 +83,14 @@ def log_it(**kwargs):
         ch.setFormatter(formatter)
         logger.addHandler(ch)
     elif kwargs.has_key('rotate'):
-        rlh = logging.handlers.RotatingFileHandler(os.path.join(kwargs['logpath'], kwargs['logname']), maxBytes=102400, backupCount=100)
+        rlh = logging.handlers.RotatingFileHandler(os.path.join(kwargs['logpath'], kwargs['logname']), maxBytes=102400,
+                                                   backupCount=100)
         rlh.setLevel(logging.DEBUG)
         rlh.setFormatter(formatter)
         logger.addHandler(rlh)
     else:
-        logging.basicConfig(filename=os.path.join(kwargs['logpath'], kwargs['logname']), format='%(aasctime)s - %(name) - %(message)s')
+        logging.basicConfig(filename=os.path.join(kwargs['logpath'], kwargs['logname']),
+                            format='%(aasctime)s - %(name) - %(message)s')
     return logger
 
 
@@ -111,9 +112,8 @@ def main():
         load_records_mongo(json_event, mongo_host)
 
 
-logger_path = '/home/rich/development/router_log_parser/logs'
+logger_path = '/var/log/router_log_parser/'
 router_parser_logger = log_it(logname='router_log_parser.log', logpath=logger_path, name='Router Logs', rotate='')
-
 
 if __name__ == '__main__':
     sys.exit(main())
