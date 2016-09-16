@@ -37,6 +37,10 @@ def write_log_data(jevents):
 
 
 def gen_events_stream(sys_log_file):
+<<<<<<< HEAD
+=======
+    # router_parser_logger.info('Begining read from {0}.'.format(sys_log_file))
+>>>>>>> d0c08960084bbd5cf1daec0ca22a2440b4db4323
     sys_log_file.seek(0, 2)
     while True:
         line = sys_log_file.readline()
@@ -77,12 +81,16 @@ def log_it(**kwargs):
     logger = logging.getLogger(kwargs['name'])
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(message)s')
-    if kwargs.has_key('console'):
+    if 'console' in kwargs:
         ch = logging.StreamHandler()
         ch.setLevel(logging.DEBUG)
         ch.setFormatter(formatter)
         logger.addHandler(ch)
+<<<<<<< HEAD
     elif kwargs.has_key('rotate'):
+=======
+    elif 'rotate' in kwargs:
+>>>>>>> d0c08960084bbd5cf1daec0ca22a2440b4db4323
         rlh = logging.handlers.RotatingFileHandler(os.path.join(kwargs['logpath'], kwargs['logname']), maxBytes=102400,
                                                    backupCount=100)
         rlh.setLevel(logging.DEBUG)
