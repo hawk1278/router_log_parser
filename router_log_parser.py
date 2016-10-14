@@ -1,12 +1,15 @@
 import logging
 import logging.handlers
-import os
-import time
 import sys
+import time
+import os
 import json
 import pymongo
+from pymongo import errors
 from optparse import OptionParser
 
+mhost = '127.0.0.1'
+mport = '27017'
 
 def status_parser(logline):
     if 'ACCEPT' in logline:
@@ -17,9 +20,11 @@ def status_parser(logline):
         return 'WEBMON'
 
 
-def src_parser(logline):
+def line_parser(logline):
     for line in logline:
         if 'SRC' in line:
+            return line.split('=')[1]
+        elif 'DST' in line:
             return line.split('=')[1]
 
 
@@ -37,7 +42,6 @@ def write_log_data(jevents):
 
 
 def gen_events_stream(sys_log_file):
-    # router_parser_logger.info('Begining read from {0}.'.format(sys_log_file))
     sys_log_file.seek(0, 2)
     while True:
         line = sys_log_file.readline()
@@ -54,11 +58,31 @@ def bulk_load_records_mongo(events):
     print db.firewall_logs.count()
 
 
-def load_records_mongo(json_record, mhost):
-    client = pymongo.MongoClient('mongodb://{0}:27017'.format(mhost))
+def load_records_mongo(json_record):
+    try:
+        client = pymongo.MongoClient('mongodb://{0}:{1}'.format(mhost, mport))
+    except errors.ConnectionFailure as e:
+        print "Unable to connect to MongoDB host at {0}".format(mhost)
+        sys.exit(1)
     db = client.all_logs.firewall_logs
     post_id = db.insert(json_record)
     router_parser_logger.info('Load record with ID: {0}'.format(post_id))
+
+
+def get_geo_data(src, dst):
+    try:
+        client = pymongo.MongoClient("mongodb://{0}:{1}".format(mhost, mport))
+    except errors.ConnectionFailure as e:
+        print "Unable to connect to MongoDB host at {0}".format(mhost)
+        sys.exit(1)
+    db = client.all_logs.ip_geodata
+    src_cur = db.find({"source": src})
+    dst_cur = db.find({"source": dst})
+    src_data = [ x for x in src_cur]
+    dst_data = [ x for x in dst_cur]
+    print {"src": src_data, "dst": dst_data}
+
+    # return {"src": src_data, "dst": dst_data}
 
 
 def gen_events(fh):
@@ -66,10 +90,17 @@ def gen_events(fh):
         json_data = json.loads(line)
         message = json_data['message'].split(' ')
         router_parser_logger.info("Generating event.")
+        status = status_parser(message)
+        src_ip = [source.split("=")[1] for source in message if "SRC" in source][0]
+        dst_ip = [dest.split("=")[1] for dest in message if "DST" in dest][0]
         event = {'event date': json_data['timestamp'],
-                 'event status': status_parser(message),
-                 'event source': src_parser(message),
-                 'event dest': dst_parser(message)
+                 'event status': status,
+                 'event source': src_ip,
+                 'event dest': dst_ip,
+                 'srcorg': {},
+                 'srcloc': {},
+                 'dstorg': {},
+                 'dstloc': {}
                  }
         yield event
 
@@ -98,22 +129,48 @@ def log_it(**kwargs):
 def main():
     parser = OptionParser()
     parser.add_option('-f', '--file', dest='filename', help='Log file to parse.')
+    parser.add_option('--dbhost', dest='mhost', help='MongoDB database (defaults to localhost).')
+    parser.add_option('--dbport', dest='mport', help='MongoDB port (defaults to 27017).')
     (options, args) = parser.parse_args()
     if not options.filename:
         parser.print_help()
-        router_parser_logger.info('No log file provided.  Exiting.')
+        router_parser_logger.error('No log file provided.  Exiting.')
         sys.exit(1)
+    if not options.mhost:
+        router_parser_logger.info('No MongoDB host provided, using localhost.')
+        global mhost
+        mhost = '127.0.0.1'
+    else:
+        global mhost
+        mhost = options.mhost
+        router_parser_logger.info('Setting MongoDB host to {0}'.format(mhost))
+    if not options.mport:
+        router_parser_logger.info('No MongoDB port provided, using 27017.')
+        global mport
+        router_parser_logger.info('Setting MongoDB port to {0}'.format(mport))
+        mport = '27017'
+    else:
+        global mport
+        mport = options.mport
+
     filename = options.filename
-    router_parser_logger.info('File to parser: {0}'.format(filename))
-    c = open(filename)
+    router_parser_logger.info('File to parse: {0}'.format(filename))
+
+    try:
+        c = open(filename)
+    except IOError:
+        print "Unable to open {0}.  Exiting application".format(filename)
+        sys.exit(1)
+
+    router_parser_logger.info('Starting router log parser application.')
     json_log_lines = gen_events_stream(c)
     json_events = gen_events(json_log_lines)
-    mongo_host = '127.0.0.1'
+
     for json_event in json_events:
-        load_records_mongo(json_event, mongo_host)
+        load_records_mongo(json_event)
 
 
-logger_path = '/home/rich/development/router_log_parser/logs'
+logger_path = '/var/log/router_log_parser/logs'
 router_parser_logger = log_it(logname='router_log_parser.log', logpath=logger_path, name='Router Logs', rotate='')
 
 if __name__ == '__main__':
