@@ -1,10 +1,12 @@
+#!/bin/env python
+
 import logging
+import pymongo
 import logging.handlers
 import sys
 import time
 import os
 import json
-import pymongo
 from pymongo import errors
 from optparse import OptionParser
 
@@ -171,7 +173,7 @@ def main():
         load_records_mongo(json_event)
 
 
-logger_path = '/var/log/router_log_parser/logs'
+logger_path = '/home/rich/router_log_parser/logs'
 log_name='router_log_parser.log'
 try:
     os.makedirs(logger_path, 777)
