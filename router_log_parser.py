@@ -176,7 +176,7 @@ def main():
 logger_path = '/var/log/router_log_parser/logs'
 
 try:
-    os.makedirs(logger_path,"777")
+    os.makedirs(logger_path, 777)
 except OSError as exc:
         if os.path.isdir(logger_path):
             pass
