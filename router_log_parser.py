@@ -173,6 +173,9 @@ def main():
 
 
 logger_path = '/var/log/router_log_parser/logs'
+if not os.path.isdir(logger_path):
+    os.mkdir(logger_path)
+    os.chmod(logger_path,"777")
 router_parser_logger = log_it(logname='router_log_parser.log', logpath=logger_path, name='Router Logs', rotate='')
 
 if __name__ == '__main__':
