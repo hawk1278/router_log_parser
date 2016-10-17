@@ -8,6 +8,7 @@ import pymongo
 from pymongo import errors
 from optparse import OptionParser
 
+
 mhost = '127.0.0.1'
 mport = '27017'
 
@@ -173,9 +174,15 @@ def main():
 
 
 logger_path = '/var/log/router_log_parser/logs'
-if not os.path.isdir(logger_path):
-    os.mkdirs(logger_path)
-    os.chmod(logger_path,"777")
+
+try:
+    os.makedirs(logger_path,"777")
+except OSError as exc:
+        if os.path.isdir(logger_path):
+            pass
+        else:
+            raise
+
 router_parser_logger = log_it(logname='router_log_parser.log', logpath=logger_path, name='Router Logs', rotate='')
 
 if __name__ == '__main__':
