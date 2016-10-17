@@ -9,8 +9,8 @@ from pymongo import errors
 from optparse import OptionParser
 
 
-mhost = '127.0.0.1'
-mport = '27017'
+# mhost = '127.0.0.1'
+# mport = '27017'
 
 # TEST
 
@@ -130,6 +130,8 @@ def log_it(**kwargs):
 
 
 def main():
+    global mhost
+    global mport
     parser = OptionParser()
     parser.add_option('-f', '--file', dest='filename', help='Log file to parse.')
     parser.add_option('--dbhost', dest='mhost', help='MongoDB database (defaults to localhost).')
@@ -141,19 +143,15 @@ def main():
         sys.exit(1)
     if not options.mhost:
         router_parser_logger.info('No MongoDB host provided, using localhost.')
-        global mhost
         mhost = '127.0.0.1'
     else:
-        global mhost
         mhost = options.mhost
         router_parser_logger.info('Setting MongoDB host to {0}'.format(mhost))
     if not options.mport:
         router_parser_logger.info('No MongoDB port provided, using 27017.')
-        global mport
-        router_parser_logger.info('Setting MongoDB port to {0}'.format(mport))
         mport = '27017'
+        router_parser_logger.info('Setting MongoDB port to {0}'.format(mport))
     else:
-        global mport
         mport = options.mport
 
     filename = options.filename
@@ -174,7 +172,7 @@ def main():
 
 
 logger_path = '/var/log/router_log_parser/logs'
-
+log_name='router_log_parser.log'
 try:
     os.makedirs(logger_path, 777)
 except OSError as exc:
@@ -183,7 +181,8 @@ except OSError as exc:
         else:
             raise
 
-router_parser_logger = log_it(logname='router_log_parser.log', logpath=logger_path, name='Router Logs', rotate='')
+router_parser_logger = log_it(logname=log_name, logpath=logger_path, name='Router Logs', rotate='')
+os.chmod(os.path.join(logger_path,log_name), 0777)
 
 if __name__ == '__main__':
     sys.exit(main())
