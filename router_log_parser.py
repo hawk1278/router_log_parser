@@ -75,17 +75,17 @@ def load_records_mongo(json_record):
 def get_geo_data(src, dst):
     try:
         client = pymongo.MongoClient("mongodb://{0}:{1}".format(mhost, mport))
-    except errors.ConnectionFailure as e:
+    except errors.ConnectionFailure:
         print "Unable to connect to MongoDB host at {0}".format(mhost)
         sys.exit(1)
     db = client.all_logs.ip_geodata
     src_cur = db.find({"source": src})
     dst_cur = db.find({"source": dst})
-    src_data = [ x for x in src_cur]
-    dst_data = [ x for x in dst_cur]
-    print {"src": src_data, "dst": dst_data}
 
-    # return {"src": src_data, "dst": dst_data}
+    src_data = src_cur[0]
+    dst_data = dst_cur[0]
+    tgt_data = {"src": src_data, "dst": dst_data}
+    return tgt_data
 
 
 def gen_events(fh):
@@ -96,14 +96,15 @@ def gen_events(fh):
         status = status_parser(message)
         src_ip = [source.split("=")[1] for source in message if "SRC" in source][0]
         dst_ip = [dest.split("=")[1] for dest in message if "DST" in dest][0]
+        target_data = get_geo_data(src_ip, dst_ip)
         event = {'event date': json_data['timestamp'],
                  'event status': status,
                  'event source': src_ip,
                  'event dest': dst_ip,
-                 'srcorg': {},
-                 'srcloc': {},
-                 'dstorg': {},
-                 'dstloc': {}
+                 'srcorg': {target_data.get("src").get("organization")},
+                 'srcloc': {target_data.get("src").get("loc")},
+                 'dstorg': {target_data.get("dst").get("loc")},
+                 'dstloc': {target_data.get("dst").get("loc")}
                  }
         yield event
 
@@ -125,7 +126,7 @@ def log_it(**kwargs):
         logger.addHandler(rlh)
     else:
         logging.basicConfig(filename=os.path.join(kwargs['logpath'], kwargs['logname']),
-                            format='%(aasctime)s - %(name) - %(message)s')
+                            format='%(asctime)s - %(name) - %(message)s')
     return logger
 
 
@@ -170,9 +171,13 @@ def main():
     for json_event in json_events:
         load_records_mongo(json_event)
 
+DEBUG = True
 
-logger_path = '/var/log/router_log_parser/logs'
-log_name='router_log_parser.log'
+if not DEBUG:
+    logger_path = '/var/log/router_log_parser/logs'
+else:
+    logger_path='/Users/rohara/router_log_parser_logs'
+log_name = 'router_log_parser.log'
 try:
     os.makedirs(logger_path, 0777)
 except OSError as exc:
