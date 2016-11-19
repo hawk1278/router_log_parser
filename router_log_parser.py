@@ -9,11 +9,6 @@ from pymongo import errors
 from optparse import OptionParser
 
 
-# mhost = '127.0.0.1'
-# mport = '27017'
-
-# TEST
-
 def status_parser(logline):
     if 'ACCEPT' in logline:
         return 'ACCEPT'
@@ -64,6 +59,7 @@ def bulk_load_records_mongo(events):
 def load_records_mongo(json_record):
     try:
         client = pymongo.MongoClient('mongodb://{0}:{1}'.format(mhost, mport))
+        print json_record
     except errors.ConnectionFailure as e:
         print "Unable to connect to MongoDB host at {0}".format(mhost)
         sys.exit(1)
